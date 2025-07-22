@@ -1,0 +1,84 @@
+#cloud-config
+hostname: ${hostname}
+# Set timezone
+timezone: Asia/Kolkata
+users:
+  - default
+  - name: root
+    passwd: $6$o974/M3m9cC2Wplo$Ot.e0GUScegqNRq3ERwv06SIoRk9cVLLFNC0hpHXPovCtrJLJ0eEWzQGFZK1RIqjnFCmj8Hn3rVDxC38jrRhR.
+    ssh-authorized-keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCprYwaf6fGUovJVh7NfGrge9lawZOaokoUeLrZn9lwzoG8DIAwJLtirAT/SqcOcH3/i/QYMRTJJSt2hXkFVz8wkHpmlO5RiRxnRgTlsDE2RsZ7YqiwFBVDSvtrI7FWhKh20ga1k+kOkuHS05hjrFsdIXz2e1Wg8AMXfngVAl7ozWv0WbXsJBtKegolJrAP1WOTaAs5ScrV94jgPrKB1IMIgsdQx8H6WXoo4gL13t/65NW+Ezt3opfR8yZ9P9cU8blDaIyopEZbCWxQZc49EnvUQuDQSMBIxs3/9rH3ayPYnH2wUeMhK2slALgifRPTMXYwukudXdOIf/MbAUQL15bwycdvhg0WvHPRE/6G/W7GQ4WkTFSdhXDJQf84U8NsrjSzSnFf0bD5JyG90oPpbauxYhYNqwB22IwE1GyyQiI06WuPJP01WR2ZRknYS+qPxxYV1mARwXRKyh0f1yU5EHbycADOnAjDjlzGCrzE7V6FBOJ3rqJ89NEE4JiIKMN/lUE= kreddy@Reddys-MacBook-Pro.local
+    lock_passwd: false
+    ssh_pwauth: true
+    sudo: ALL=(ALL) NOPASSWD:ALL
+  - name: rocky
+    passwd: $6$o974/M3m9cC2Wplo$Ot.e0GUScegqNRq3ERwv06SIoRk9cVLLFNC0hpHXPovCtrJLJ0eEWzQGFZK1RIqjnFCmj8Hn3rVDxC38jrRhR.
+    ssh-authorized-keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCprYwaf6fGUovJVh7NfGrge9lawZOaokoUeLrZn9lwzoG8DIAwJLtirAT/SqcOcH3/i/QYMRTJJSt2hXkFVz8wkHpmlO5RiRxnRgTlsDE2RsZ7YqiwFBVDSvtrI7FWhKh20ga1k+kOkuHS05hjrFsdIXz2e1Wg8AMXfngVAl7ozWv0WbXsJBtKegolJrAP1WOTaAs5ScrV94jgPrKB1IMIgsdQx8H6WXoo4gL13t/65NW+Ezt3opfR8yZ9P9cU8blDaIyopEZbCWxQZc49EnvUQuDQSMBIxs3/9rH3ayPYnH2wUeMhK2slALgifRPTMXYwukudXdOIf/MbAUQL15bwycdvhg0WvHPRE/6G/W7GQ4WkTFSdhXDJQf84U8NsrjSzSnFf0bD5JyG90oPpbauxYhYNqwB22IwE1GyyQiI06WuPJP01WR2ZRknYS+qPxxYV1mARwXRKyh0f1yU5EHbycADOnAjDjlzGCrzE7V6FBOJ3rqJ89NEE4JiIKMN/lUE= kreddy@Reddys-MacBook-Pro.local
+    lock_passwd: false
+    ssh_pwauth: true
+    sudo: ALL=(ALL) NOPASSWD:ALL
+
+# Set passwords (plain-text for root and rocky users)
+chpasswd:
+  list: |
+    root:unroot
+    rocky:unroot
+  expire: false
+
+# Enable SSH password authentication for the root and rocky users
+ssh_pwauth: true
+
+write_files:
+  - path: /etc/NetworkManager/system-connections/eth0.nmconnection
+    content: |
+      [connection]
+      id=eth0
+      type=ethernet
+      interface-name=eth0
+      [ipv4]
+      method=manual
+      addresses=${ip_address}/24
+      gateway=${gateway}
+      dns=8.8.8.8;8.8.4.4
+      [ipv6]
+      method=ignore
+    permissions: '0600'
+  - path: /etc/hosts
+    content: |
+      127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+      172.16.90.131 HA-1 TVM-1
+      172.16.90.132 HA-2 TVM-2
+      172.16.90.133 k8s-master-1 TVM-3
+      172.16.90.134 k8s-master-2 TVM-4
+      172.16.90.135 k8s-master-3 TVM-5
+      172.16.90.136 k8s-worker-1 TVM-6
+      172.16.90.137 k8s-worker-2 TVM-7
+      172.16.90.138 k8s-worker-3 TVM-8
+      172.16.90.139 k8s-worker-4 TVM-9
+      172.16.90.140 k8s-devops TVM-10
+      172.16.90.141 k8s-vrrp-ip
+    permissions: '0644'
+
+runcmd:
+  - chmod 600 /etc/NetworkManager/system-connections/eth0.nmconnection
+  - nmcli connection load /etc/NetworkManager/system-connections/eth0.nmconnection
+  - nmcli connection up eth0
+  - hostnamectl set-hostname ${hostname}
+  - sed -i 's/^SELINUX=.*/SELINUX=disabled/' /etc/selinux/config
+  - sed -i 's/^#PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+  - systemctl restart sshd
+  - growpart /dev/sda 4
+  - pvresize /dev/sda4
+  - lvextend -l +100%FREE /dev/mapper/rocky-lvroot
+  - xfs_growfs /dev/mapper/rocky-lvroot
+  - systemctl disable firewalld
+  - dnf install -y vim epel-release git wget curl vim bash-completion nc tcpdump telnet bind-utils
+
+# Specify power state
+power_state:
+  delay: "+1"
+  mode: reboot
+  message: Rebooting after cloud-init
+  timeout: 30
+  condition: True
