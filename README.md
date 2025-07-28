@@ -29,7 +29,7 @@ The main goal of this Terraform project is to:
 1. **Clone the repository:**
    ```sh
    git clone <repo-url>
-   cd Nutanix-Terra-03-01-2025
+   cd Nutanix-Terraform-Automation
    ```
 
 2. **Configure Variables:**
