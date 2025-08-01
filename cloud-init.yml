@@ -22,8 +22,8 @@ users:
 # Set passwords (plain-text for root and rocky users)
 chpasswd:
   list: |
-    root:unroot
-    rocky:unroot
+    root:root
+    rocky:root
   expire: false
 
 # Enable SSH password authentication for the root and rocky users
